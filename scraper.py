@@ -1,0 +1,110 @@
+from bs4 import BeautifulSoup
+import requests
+import pandas as pd
+import time
+from typing import List
+import re
+
+#TODO: Normalize names across each database
+
+class Scraper:
+    def __init__(self, url: str):
+        self._url = url
+        self._matrix = None
+
+    @property 
+    def url(self) -> str:
+        return self._url
+
+    @url.setter
+    def url(self, value: str) -> None:
+        self._url = value
+    
+    def get_html(self) -> str: 
+        try:
+            r = requests.get(self._url, timeout=10)
+            r.raise_for_status()
+            return r.text
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching {self._url}: {e}")
+            return ""
+
+    def get_soup(self) -> BeautifulSoup:
+        html = self.get_html()
+        if html:
+            return BeautifulSoup(html, "html.parser")
+        return None
+
+class SRS(Scraper):
+    def __init__(self, url):
+        super().__init__(url)
+
+    def scrape_schedule_no_months(self) -> None: 
+        soup = self.get_soup()
+        tbody = soup.find("tbody")
+        tr = tbody.find_all("tr")
+        result = []
+        for row in tr:
+            cells = row.find_all("td")
+            new_row = []
+            for cell in cells:
+                new_row.append(cell.get_text(strip=True))
+            
+            if not new_row:
+                continue
+            result.append(new_row)
+
+        self._matrix = result
+
+
+
+    def clean_cfb_schedule(self) -> pd.DataFrame:
+        if len(matrix[0]) == 9:
+            columns = [
+                "Week", "Date", "Day", "Away", "Away Pts", "N", "Home", "Home Pts", "Notes"
+            ]
+
+        else:
+            columns = [
+                "Week", "Date", "Time", "Day", "Away", "Away Pts", "N", "Home", "Home Pts", "Notes"
+            ]
+
+        df = pd.DataFrame(matrix, columns=columns)
+
+        # Change columns from Winner/Loser to Away/Home with the correct team.
+        df.loc[df['N'] == "", ["Home", "Away"]] = df.loc[df['N'] == "", ["Away", "Home"]].values
+        df.loc[df['N'] == "", ["Home Pts", "Away Pts"]] = df.loc[df['N'] == "", ["Away Pts", "Home Pts"]].values
+        df['N'] = df['N'].replace('@', '')
+
+        # Remove ranking strs 
+        df['Home'] = df['Home'].apply(self.remove_ranking)
+        df['Away'] = df['Away'].apply(self.remove_ranking)
+
+
+        return df
+
+    def remove_ranking(self, value: str) -> str:
+        return re.sub(r"\(\d+\)", "", value).strip()
+
+    def clean_nfl_schedule(self) -> pd.DataFrame:
+        if len(self._matrix[0]) == 13:
+            columns = [
+                "Day", "Date", "Time", "Away", "N", "Home",
+                "Boxscore", "Away Pts", "Home Pts", "Home Yds", "Home TOs", 
+                "Away Yds", "Away TOs"
+            ]
+        
+        df = pd.DataFrame(self._matrix, columns=columns)
+
+        df.loc[df['N'] == '', ["Home", "Away"]] = df.loc[df['N'] == "", ["Away", "Home"]].values
+        df.loc[df['N'] == '', ["Home Pts", "Away Pts"]] = df.loc[df['N'] == "", ["Away Pts", "Home Pts"]].values
+        df.loc[df['N'] == '', ["Home Yds", "Away Yds"]] = df.loc[df['N'] == "", ["Away Yds", "Home Yds"]].values
+        df.loc[df['N'] == '', ["Home TOs", "Away TOs"]] = df.loc[df['N'] == "", ["Away TOs", "Home TOs"]].values
+        df['N'] = df['N'].replace('@', '')
+
+        df = df[df['Away'].notna()]  # Remove rows without date
+
+        df = df.drop(columns=["Boxscore"])
+        
+        return df
+

@@ -5,6 +5,10 @@ import time
 from typing import List
 import re
 import numpy as np
+from util import convert_abbr_month_format
+from util import convert_12hr_to_24hr
+from util import convert_nba_date_to_iso8601
+from util import convert_nba_time
 
 #TODO: Normalize names across each database
 
@@ -40,7 +44,7 @@ class SRS(Scraper):
     def __init__(self, url):
         super().__init__(url)
 
-    def scrape_schedule_no_months(self) -> None: 
+    def scrape_schedule(self) -> None: 
         soup = self.get_soup()
         tbody = soup.find("tbody")
         tr = tbody.find_all("tr")
@@ -60,28 +64,45 @@ class SRS(Scraper):
         self._matrix = result
 
 
-
     def clean_cfb_schedule(self) -> pd.DataFrame:
-        if len(matrix[0]) == 9:
+        if len(self._matrix[0]) == 11:
             columns = [
-                "Week", "Date", "Day", "Away", "Away Pts", "N", "Home", "Home Pts", "Notes"
+                "Game Num", "Week", "Date", "Time", "Day", "Away", 
+                "Away Pts", "N", "Home", "Home Pts", "Notes"
             ]
 
         else:
             columns = [
-                "Week", "Date", "Time", "Day", "Away", "Away Pts", "N", "Home", "Home Pts", "Notes"
+               "Game Num",  "Week", "Date", "Day", "Away", "Away Pts", 
+                "N", "Home", "Home Pts", "Notes"
             ]
 
-        df = pd.DataFrame(matrix, columns=columns)
+        df = pd.DataFrame(self._matrix, columns=columns)
 
         # Change columns from Winner/Loser to Away/Home with the correct team.
         df.loc[df['N'] == "", ["Home", "Away"]] = df.loc[df['N'] == "", ["Away", "Home"]].values
         df.loc[df['N'] == "", ["Home Pts", "Away Pts"]] = df.loc[df['N'] == "", ["Away Pts", "Home Pts"]].values
         df['N'] = df['N'].replace('@', '')
 
+        df = df[df["Week"].notna() & (df["Week"] != "")]
+        df = df.drop(columns=["Game Num"])
+
         # Remove ranking strs 
         df['Home'] = df['Home'].apply(self.remove_ranking)
         df['Away'] = df['Away'].apply(self.remove_ranking)
+
+        df['Date'] = df['Date'].apply(convert_abbr_month_format)
+
+        # Converts time frm 12hr to 24hr format if string is not empty or NaN
+        if "Time" in df.columns:
+            try:
+                df["Time"] = df["Time"].apply(
+                    lambda x: convert_12hr_to_24hr(x)
+                    if pd.notna(x) and x.strip() != ""
+                    else x
+                )
+            except Exception as e:
+                print(f"Error converting time: {e}")
 
         return df
 
@@ -89,9 +110,9 @@ class SRS(Scraper):
         return re.sub(r"\(\d+\)", "", value).strip()
 
     def clean_nfl_schedule(self) -> pd.DataFrame:
-        if len(self._matrix[0]) == 13:
+        if len(self._matrix[0]) == 14:
             columns = [
-                "Day", "Date", "Time", "Away", "N", "Home",
+                "Week", "Day", "Date", "Time", "Away", "N", "Home",
                 "Boxscore", "Away Pts", "Home Pts", "Home Yds", "Home TOs", 
                 "Away Yds", "Away TOs"
             ]
@@ -104,9 +125,21 @@ class SRS(Scraper):
         df.loc[df['N'] == '', ["Home TOs", "Away TOs"]] = df.loc[df['N'] == "", ["Away TOs", "Home TOs"]].values
         df['N'] = df['N'].replace('@', '')
 
-        df = df[df['Away'].notna()]  # Remove rows without date
+
+        df = df[df['Away'].notna() & (df["Away"] != "")]
 
         df = df.drop(columns=["Boxscore"])
+
+        # Converts time frm 12hr to 24hr format if string is not empty or NaN
+        if "Time" in df.columns:
+            try:
+                df["Time"] = df["Time"].apply(
+                    lambda x: convert_12hr_to_24hr(x)
+                    if pd.notna(x) and x.strip() != ""
+                    else x
+                )
+            except Exception as e:
+                print(f"Error converting time: {e}")
         
         return df
 
@@ -145,10 +178,24 @@ class SRS(Scraper):
 
         return df
 
+    # TODO: Change time format from hh:mmp to 24hr format
+    def clean_nba_schedule(self) -> pd.DataFrame:
+        if len(self._matrix[0]) == 12:
+            columns = [
+                "Date", "Time", "Away", "Away Pts", "Home", "Home Pts",
+                "Boxscore", "OT", "Attendance", "LoG", "Arena", "Notes"
+            ]
+
+        df = pd.DataFrame(self._matrix, columns=columns)
+
+        df = df[df['Away'].notna() & (df["Away"] != "")]
+
+        df = df.drop(["Boxscore"], axis=1)
+
+        df['Date'] = df['Date'].apply(convert_nba_date_to_iso8601)
+
+        return df
 
 
 if __name__ == "__main__":
-    s = SRS("https://fbref.com/en/comps/9/2023-2024/schedule/2023-2024-Premier-League-Scores-and-Fixtures")
-    s.scrape_schedule_no_months()
-    df = s.clean_premier_league_fixtures()
-    print(df.columns)
+    pass

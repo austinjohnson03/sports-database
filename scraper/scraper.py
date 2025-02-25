@@ -4,6 +4,7 @@ import pandas as pd
 import time
 from typing import List
 import re
+import numpy as np
 
 #TODO: Normalize names across each database
 
@@ -82,7 +83,6 @@ class SRS(Scraper):
         df['Home'] = df['Home'].apply(self.remove_ranking)
         df['Away'] = df['Away'].apply(self.remove_ranking)
 
-
         return df
 
     def remove_ranking(self, value: str) -> str:
@@ -117,10 +117,31 @@ class SRS(Scraper):
                 "score", "away xG", "away", "attendance", "venue",
                 "referee", "match report", "notes"
             ]
+        elif len(self._matrix[0]) == 12:
+            columns = [
+                "week", "day", "date", "time", "home",
+                "score", "away", "attendance", "venue",
+                "referee", "match report", "notes"
+            ]
+
 
         df = pd.DataFrame(self._matrix, columns=columns)
 
-        df = df.drop(["home xG", "away xG", "match report"], axis=1)
+        df = df[df["week"].notna() & (df["week"] != "")]
+
+        df = df.dropna(subset=["week"])
+
+        df['score'] = df['score'].astype(str).replace([np.nan, ''], '-')
+
+        df['score'] = df['score'].str.replace('–', '-', regex=False)
+
+        df[["home score", "away score"]] = df["score"].str.split('-', n=1, expand=True)
+        
+        
+        if len(self._matrix[0]) == 14:
+            df = df.drop(["home xG", "away xG", "match report", "score"], axis=1)
+        elif len(self._matrix[0]) == 12:
+            df = df.drop(["match report", "score"], axis=1)
 
         return df
 
@@ -129,4 +150,5 @@ class SRS(Scraper):
 if __name__ == "__main__":
     s = SRS("https://fbref.com/en/comps/9/2023-2024/schedule/2023-2024-Premier-League-Scores-and-Fixtures")
     s.scrape_schedule_no_months()
-    print(s.clean_premier_league_fixtures())
+    df = s.clean_premier_league_fixtures()
+    print(df.columns)

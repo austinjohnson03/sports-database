@@ -45,8 +45,10 @@ class SRS(Scraper):
         tr = tbody.find_all("tr")
         result = []
         for row in tr:
+            header = row.find("th")
             cells = row.find_all("td")
             new_row = []
+            new_row.append(header.get_text(strip=True))
             for cell in cells:
                 new_row.append(cell.get_text(strip=True))
             
@@ -108,3 +110,23 @@ class SRS(Scraper):
         
         return df
 
+    def clean_premier_league_fixtures(self) -> pd.DataFrame:
+        if len(self._matrix[0]) == 14:
+            columns = [
+                "week", "day", "date", "time", "home", "home xG", 
+                "score", "away xG", "away", "attendance", "venue",
+                "referee", "match report", "notes"
+            ]
+
+        df = pd.DataFrame(self._matrix, columns=columns)
+
+        df = df.drop(["home xG", "away xG", "match report"], axis=1)
+
+        return df
+
+
+
+if __name__ == "__main__":
+    s = SRS("https://fbref.com/en/comps/9/2023-2024/schedule/2023-2024-Premier-League-Scores-and-Fixtures")
+    s.scrape_schedule_no_months()
+    print(s.clean_premier_league_fixtures())

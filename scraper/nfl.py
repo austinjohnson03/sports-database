@@ -2,7 +2,7 @@
 from scraper import SRS
 from file_util import create_path
 
-def get_nfl_results(year: int) -> None:
+def get_results(year: int) -> None:
     nfl_range = range(1920, 2025)
     if year not in nfl_range:
         raise ValueError(
@@ -23,4 +23,4 @@ def get_nfl_results(year: int) -> None:
     df = s.clean_nfl_schedule()
 
     df.to_csv(filename, index=False)
-    print(f"File saved to {filename}")
+    print(f"{year} NFL Results/Schedule written to '{filename}'")

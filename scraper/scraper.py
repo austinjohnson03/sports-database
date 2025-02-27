@@ -178,7 +178,6 @@ class SRS(Scraper):
 
         return df
 
-    # TODO: Change time format from hh:mmp to 24hr format
     def clean_nba_schedule(self) -> pd.DataFrame:
         if len(self._matrix[0]) == 12:
             columns = [
@@ -194,8 +193,19 @@ class SRS(Scraper):
 
         df['Date'] = df['Date'].apply(convert_nba_date_to_iso8601)
 
+        for index, row in df.iterrows():
+            time_raw = row["Time"]
+            t_strip = time_raw.strip()
+            hour, minute = t_strip.split(':')
+
+            if t_strip[-1] == 'p':
+                hour = int(hour)
+                hour += 12
+                df.loc[index, "Time"] = f"{hour}:{minute[:-1]}"
+
+
+
+            elif t_strip[-1] == 'a':
+                df.loc[index, "Time"] = t_strip[ :-1]
+
         return df
-
-
-if __name__ == "__main__":
-    pass

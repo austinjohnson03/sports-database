@@ -2,7 +2,7 @@ from scraper import SRS
 from file_util import create_path
 from util import sleep_scraper
 
-def get_epl_fixtures(year: int) -> None:
+def get_fixtures(year: int) -> None:
     epl_range = range(1888, 2025)
     epl_exclusion_range = range(1940, 1946)
 
@@ -27,5 +27,5 @@ def get_epl_fixtures(year: int) -> None:
     df = s.clean_premier_league_fixtures()
 
     df.to_csv(filename, index=False)
-    print(f"File written to '{filename}'.")
+    print(f"{year} EPL Results/Fixtures written to '{filename}'")
 

@@ -1,8 +1,9 @@
 from scraper import SRS
 from file_util import create_path
 from util import sleep_scraper
+import pandas as pd
 
-def get_nba_results(year: int) -> None:
+def get_results(year: int) -> None:
     months = [
         "october", "november", "december", 
         "january", "february", "march", 
@@ -10,7 +11,7 @@ def get_nba_results(year: int) -> None:
     ]
 
     month_table = {
-        2024: months[ :6],
+        2025: months[ :6],
         2021: months[2:] + ["july"],
         2020: [
         "october-2019", "november", "december", "january",
@@ -68,8 +69,9 @@ def get_nba_results(year: int) -> None:
     
     months_in_season = []
 
-    if year in month_table:
-        months_in_season = month_table[year]
+    # Year increased due to SRS storing url for season as ending year.
+    if year + 1 in month_table:
+        months_in_season = month_table[year + 1]
 
     else:
         months_in_season = months
@@ -77,19 +79,25 @@ def get_nba_results(year: int) -> None:
     dir_name = f"../docs/nba/{year}"
     create_path(dir_name)
 
-    for month in months_in_season:
-        if year < 1949:
-            url = f"https://www.basketball-reference.com/leagues/BAA_{year}_games-{month}.html"
-        else:
-            url = f"https://www.basketball-reference.com/leagues/NBA_{year}_games-{month}.html"
+    season_dfs = []
 
-        filename = dir_name + f"/results-{month}-{year}.csv"
+    # Year increased due to SRS storing url for season as ending year.
+    for month in months_in_season:
+        if year < 1950:
+            url = f"https://www.basketball-reference.com/leagues/BAA_{year + 1}_games-{month}.html"
+        else:
+            url = f"https://www.basketball-reference.com/leagues/NBA_{year + 1}_games-{month}.html"
 
         s = SRS(url)
         s.scrape_schedule()
         df = s.clean_nba_schedule()
-
-        df.to_csv(filename, index=False)
-        print(f"File saved to {filename}")
+        season_dfs.append(df)
+        print(df)
+        print(f"NBA result data scraped for {month.title()}, {year}")
         sleep_scraper()
+    
+    result = pd.concat(season_dfs, ignore_index=True)
+    filename = dir_name + f"/results-{year}.csv"
+    result.to_csv(filename, index=False)
+    print(f"{year} NBA Results/Schedule written to '{filename}'")
 

@@ -2,7 +2,7 @@ from scraper import SRS
 from file_util import create_path
 from util import sleep_scraper
 
-def get_cfb_results(year: int) -> None:
+def get_results(year: int) -> None:
     cfb_range = range(1869, 2025)
 
     if year not in cfb_range or year == 1871:
@@ -22,5 +22,5 @@ def get_cfb_results(year: int) -> None:
     df = s.clean_cfb_schedule()
 
     df.to_csv(filename, index=False)
-    print(f"File saved to {filename}")
+    print(f"{year} CFB Results/Schedule written to '{filename}'")
 

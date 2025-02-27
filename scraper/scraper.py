@@ -209,3 +209,8 @@ class SRS(Scraper):
                 df.loc[index, "Time"] = t_strip[ :-1]
 
         return df
+
+
+
+    def clean_mlb_scheudle(self):
+        pass

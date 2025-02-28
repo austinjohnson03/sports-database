@@ -22,13 +22,13 @@ class Season {
 
     void setSeasonID(uint16_t newIdx);
     void setStartYear(uint16_t newStartYear);
-    void setTeamMap(std::map<int, Team*> newTeamMap);
+    void setTeamMap(std::map<uint16_t, Team*> newTeamMap);
     void setSchedule(Schedule newSchedule);
 
   private:
     uint16_t idx;
     uint16_t startYear;
-    std::map<int, Team*> teamMap;
+    std::map<uint16_t, Team*> teamMap;
     Schedule schedule;
 };
 

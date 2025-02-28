@@ -12,23 +12,22 @@ class League {
     League(
         uint16_t idx,
         std::string name,
-        std::map<int, Season> seasonMap;
+        std::map<uint16_t, Season> seasonMap;
         );
 
     uint16_t getLeagueId() const;
     std::string getLeagueName() const;
-    std::map<int, Season> getSeasons() const;
+    std::map<uint16_t, Season> getSeasons() const;
 
     void setLeagueId(uint16_t newIdx);
     void setLeagueName(std::string newName);
-    void setSeasons(std::map<int, Season> seasonMap);
+    void setSeasons(std::map<uint16_t, Season> seasonMap);
 
     void addSeason(Season season);
     void deleteSeason(uint16_t seasonIdx);
 
   private:
     uint16_t idx;
-    w
     std::string name;
     std::map<int, Season> seasonMap;
 };
